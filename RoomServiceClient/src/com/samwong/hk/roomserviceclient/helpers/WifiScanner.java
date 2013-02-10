@@ -14,8 +14,11 @@ import com.samwong.hk.roomservice.api.commons.dataFormat.WifiInformation;
 
 public class WifiScanner {
 
-	public static WifiInformation getWifiInformation(Activity activity) {
+	public synchronized static WifiInformation getWifiInformation(Activity activity) {
 		WifiManager wifi = (WifiManager) activity.getSystemService(Context.WIFI_SERVICE);
+		if(!wifi.isWifiEnabled()){
+			wifi.setWifiEnabled(true);
+		}
 		wifi.startScan();
 		List<ScanResult> results = wifi.getScanResults();
 		Set<BssidStrength> signalStrengths = new HashSet<BssidStrength>(30);
