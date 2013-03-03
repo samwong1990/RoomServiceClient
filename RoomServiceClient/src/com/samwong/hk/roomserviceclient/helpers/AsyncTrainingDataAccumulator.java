@@ -4,15 +4,16 @@ import java.util.LinkedList;
 import java.util.List;
 
 import android.app.Activity;
+import android.os.SystemClock;
 
 import com.samwong.hk.roomservice.api.commons.dataFormat.WifiInformation;
 
 public class AsyncTrainingDataAccumulator extends
 		AsyncTaskWithExceptions<Activity, WifiInformation, List<WifiInformation>> {
 
-	private boolean isCollectingData = true;
+	private static final long SAMPLING_INTERVAL_IN_MILLISEC = 500;
 	private final String roomName;
-	private List<WifiInformation> fingerprints = null;
+	private final List<WifiInformation> fingerprints = new LinkedList<WifiInformation>();;
 	
 	public AsyncTrainingDataAccumulator(String roomName){
 		this.roomName = roomName;
@@ -24,22 +25,17 @@ public class AsyncTrainingDataAccumulator extends
 			addException(new IllegalArgumentException("Expects a single activity as param."));
 		}
 		Activity activity = params[0];
-		List<WifiInformation> accumulator = new LinkedList<WifiInformation>();
-		while(isCollectingData){
+		while(!isCancelled()){
 			WifiInformation datapoint = WifiScanner.getWifiInformation(activity);
-			accumulator.add(datapoint);
+			fingerprints.add(datapoint);
 			publishProgress(datapoint);
+			SystemClock.sleep(SAMPLING_INTERVAL_IN_MILLISEC);
 		}
-		fingerprints = accumulator;
-		return accumulator;
+		return fingerprints;
 	}
 	
 	public List<WifiInformation> getFingerprints(){
 		return fingerprints;
-	}
-	
-	public void stop(){
-		isCollectingData = false;
 	}
 	
 	public String getRoomName() {

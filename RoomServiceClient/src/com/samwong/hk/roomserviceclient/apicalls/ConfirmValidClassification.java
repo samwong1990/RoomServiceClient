@@ -2,14 +2,12 @@ package com.samwong.hk.roomserviceclient.apicalls;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Scanner;
 
 import net.sf.javaml.core.Instance;
 
 import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.message.BasicNameValuePair;
 
 import android.content.Context;
@@ -17,15 +15,16 @@ import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.samwong.hk.roomservice.api.commons.dataFormat.AuthenticationDetails;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Report;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.Operation;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ParameterKey;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ReturnCode;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
-import com.samwong.hk.roomserviceclient.constants.URLs;
 import com.samwong.hk.roomserviceclient.helpers.AsyncTaskWithExceptionsAndContext;
 import com.samwong.hk.roomserviceclient.helpers.AuthenticationDetailsPreperator;
+import com.samwong.hk.roomserviceclient.helpers.URLBuilder;
 
 /**
  * Classifier returned the right room, so the data used in query can be saved as
@@ -58,22 +57,17 @@ public abstract class ConfirmValidClassification extends
 				param[0].getRoom()));
 		nameValuePairs.add(new BasicNameValuePair(ParameterKey.INSTANCE
 				.toString(), instanceAsJson));
+		AuthenticationDetails authenticationDetails = new AuthenticationDetailsPreperator().getAuthenticationDetails(getContext());
 		nameValuePairs.add(new BasicNameValuePair(
 				ParameterKey.AUENTICATION_DETAILS.toString(),
-				AuthenticationDetailsPreperator.getAuthenticationDetailsAsJson(getContext())));
+				AuthenticationDetailsPreperator.getAuthenticationDetailsAsJson(authenticationDetails)));
 		Log.d(LogTag.APICALL.toString(), nameValuePairs.toString());
 
-		UrlEncodedFormEntity putData;
 		HttpURLConnection urlConnection = null;
 		try {
-			urlConnection = (HttpURLConnection) new URL(URLs.SERVLET_URL)
+			urlConnection = (HttpURLConnection) URLBuilder.build(nameValuePairs)
 					.openConnection();
-			putData = new UrlEncodedFormEntity(nameValuePairs, "UTF-8");
-			urlConnection.setDoOutput(true);
 			urlConnection.setRequestMethod("PUT");
-			urlConnection.setFixedLengthStreamingMode((int) putData
-					.getContentLength());
-			putData.writeTo(urlConnection.getOutputStream());
 			urlConnection.connect();
 			Scanner scanner = new Scanner(urlConnection.getInputStream(),
 					"UTF-8").useDelimiter("\\A");

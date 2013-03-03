@@ -17,6 +17,7 @@ import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.samwong.hk.roomservice.api.commons.dataFormat.AuthenticationDetails;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Report;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.Operation;
@@ -45,10 +46,11 @@ public abstract class UndoConfirmValidClassification  extends AsyncTaskWithExcep
 		nameValuePairs.add(new BasicNameValuePair(ParameterKey.OPERATION.toString(), Operation.DELETE.toString()));
 		nameValuePairs.add(new BasicNameValuePair(ParameterKey.ROOM.toString(), param[0].getRoom()));
 		nameValuePairs.add(new BasicNameValuePair(ParameterKey.INSTANCE.toString(), json));
+		AuthenticationDetails authenticationDetails = new AuthenticationDetailsPreperator().getAuthenticationDetails(getContext());
 		nameValuePairs.add(new BasicNameValuePair(
 				ParameterKey.AUENTICATION_DETAILS.toString(),
-				AuthenticationDetailsPreperator.getAuthenticationDetailsAsJson(getContext())));
-
+				AuthenticationDetailsPreperator.getAuthenticationDetailsAsJson(authenticationDetails)));
+		
 		Log.d(LogTag.APICALL.toString(), nameValuePairs.toString());
 		
 		UrlEncodedFormEntity putData;

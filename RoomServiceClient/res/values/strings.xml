@@ -9,6 +9,8 @@
     <string name="menu_goToTrainingMode">Go to training mode</string>
     
     <string name="menu_reloadRoomList">Update Room List for autocomplete</string>
+    <string name="menu_Training_GoToMainActivity">Go to classifier screen</string>
+    
     <string name="addRoomButtonString">Add Room</string>
     <string name="addRoomButtonWaiting">Working&#x2026;</string>
     <string name="addRoomButtonSuccess">Add Room</string>

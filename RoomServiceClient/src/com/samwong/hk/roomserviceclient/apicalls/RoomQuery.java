@@ -20,6 +20,7 @@ import android.util.Log;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.samwong.hk.roomservice.api.commons.dataFormat.AuthenticationDetails;
 import com.samwong.hk.roomservice.api.commons.dataFormat.ResponseWithReports;
 import com.samwong.hk.roomservice.api.commons.dataFormat.WifiInformation;
 import com.samwong.hk.roomservice.api.commons.helper.InstanceFriendlyGson;
@@ -58,10 +59,11 @@ AsyncTaskWithExceptionsAndContext<Activity, Integer, ResponseWithReports> {
 				.toString(), Defaults.classifier.toString()));
 		nameValuePairs.add(new BasicNameValuePair(ParameterKey.OBSERVATION
 				.toString(), new Gson().toJson(wifiInformation)));
+		AuthenticationDetails authenticationDetails = new AuthenticationDetailsPreperator().getAuthenticationDetails(getContext());
 		nameValuePairs.add(new BasicNameValuePair(
 				ParameterKey.AUENTICATION_DETAILS.toString(),
-				AuthenticationDetailsPreperator.getAuthenticationDetailsAsJson(getContext())));
-
+				AuthenticationDetailsPreperator.getAuthenticationDetailsAsJson(authenticationDetails)));
+		
 		UrlEncodedFormEntity postData;
 
 		HttpURLConnection urlConnection = null;
@@ -71,7 +73,7 @@ AsyncTaskWithExceptionsAndContext<Activity, Integer, ResponseWithReports> {
 			urlConnection = (HttpURLConnection) new URL(URLs.SERVLET_URL)
 			.openConnection();
 			urlConnection.setConnectTimeout(1000);
-			urlConnection.setRequestMethod("PUT");
+			urlConnection.setRequestMethod("POST");
 			urlConnection.setDoOutput(true);
 			urlConnection.setFixedLengthStreamingMode((int) postData
 					.getContentLength());
@@ -87,9 +89,9 @@ AsyncTaskWithExceptionsAndContext<Activity, Integer, ResponseWithReports> {
 							"UTF-8").useDelimiter("\\A");
 					if (scanner.hasNext()) {
 						String result = scanner.next();
-						Log.i(LogTag.APICALL.toString(), result);
+						Log.i(LogTag.APICALL.toString(), "RESPONSE:" + result);
 						return InstanceFriendlyGson.gson.fromJson(result,
-								new TypeToken<List<ResponseWithReports>>() {
+								new TypeToken<ResponseWithReports>() {
 						}.getType());
 					}
 					Log.w(LogTag.APICALL.toString(), "No response for the room query");

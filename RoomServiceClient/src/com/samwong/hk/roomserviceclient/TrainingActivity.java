@@ -3,7 +3,9 @@ package com.samwong.hk.roomserviceclient;
 import java.util.List;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -63,33 +65,36 @@ public class TrainingActivity extends Activity {
 		if (on) {
 			submitButton.setText(getText(R.string.submitDataForRoomWaiting));
 			submitButton.setEnabled(false);
-			
 			AutoCompleteTextView textView = (AutoCompleteTextView) findViewById(R.id.newRoomIdentifier);
 			String roomName = textView.getText().toString();
-
 			currentAccumulator = new AsyncTrainingDataAccumulator(roomName) {
 				@Override
 				protected void onProgressUpdate(WifiInformation... values) {
 					Console.println(thisActivity, LogLevel.INFO, LogTag.RESULT, "recorded a datapoint");
+					Console.println(thisActivity, LogLevel.INFO, LogTag.RESULT, "isCancelled == " + this.isCancelled());
 				}
 			};
 			currentAccumulator.execute(this);
 		} else {
-			currentAccumulator.stop();
+			currentAccumulator.cancel(false);
 			Console.println(thisActivity, LogLevel.INFO, LogTag.RESULT, "Done, recorded " + currentAccumulator.getFingerprints().size() + " datapoint");
 			submitButton.setText(String.format("%s %s", getString(R.string.submitDataForRoom_), currentAccumulator.getRoomName()));
 			submitButton.setEnabled(true);
 			submitButton.setOnClickListener(new OnClickListener() {
+				@SuppressWarnings("unchecked") //This is for varargs parameter. This should be type safe.
 				@Override
 				public void onClick(View v) {
+					Log.d(LogTag.DEBUGGING.toString(), "Creating onclick obj for submitButton");
 					new SubmitBatchTrainingData(currentAccumulator.getRoomName(), thisActivity) {
 						@Override
 						protected void onPostExecute(Response result) {
 							if(!result.getReturnCode().equals(ReturnCode.OK)){
 								Console.println(thisActivity, LogLevel.ERROR, LogTag.APICALL, result.getExplanation());
+							}else{
+								Console.println(thisActivity, LogLevel.ERROR, LogTag.APICALL, "OK");
 							}
 						}
-					};
+					}.execute(currentAccumulator.getFingerprints());
 				}
 			});
 		}
@@ -100,6 +105,10 @@ public class TrainingActivity extends Activity {
 		switch (item.getItemId()) {
 		case R.id.menu_reloadRoomList:
 			updateRoomList();
+			return true;
+		case R.id.menu_Training_GoToMainActivity:
+			Intent intent = new Intent(this, MainActivity.class);
+		    startActivity(intent);
 			return true;
 		default:
 			return super.onOptionsItemSelected(item);
