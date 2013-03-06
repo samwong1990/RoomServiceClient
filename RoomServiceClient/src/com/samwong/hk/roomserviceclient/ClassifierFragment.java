@@ -21,7 +21,7 @@ import com.samwong.hk.roomservice.api.commons.dataFormat.Report;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
 import com.samwong.hk.roomservice.api.commons.dataFormat.ResponseWithReports;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ReturnCode;
-import com.samwong.hk.roomserviceclient.apicalls.ConfirmValidClassification;
+import com.samwong.hk.roomserviceclient.apicalls.PutValidClassificationConfirmation;
 import com.samwong.hk.roomserviceclient.apicalls.RoomQuery;
 import com.samwong.hk.roomserviceclient.constants.LogLevel;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
@@ -34,7 +34,7 @@ public class ClassifierFragment extends Fragment {
 	/**
 	 * Uses AsyncTask and sleep to do the polling.
 	 * executeOnExecutor is used because the default executor is a serial executor. 
-	 * This prevents the AsyncTask in locateMe from running.
+	 * The serial executor the AsyncTask in locateMe from running.
 	 * @param view
 	 */
 	public synchronized void toggleTrackingMode(final View view) {
@@ -121,7 +121,7 @@ public class ClassifierFragment extends Fragment {
 								// Just need one report, because the wifi
 								// signature will be the same for all.
 
-								new ConfirmValidClassification(getActivity()) {
+								new PutValidClassificationConfirmation(getActivity()) {
 									@Override
 									protected void onPostExecute(
 											Response response) {

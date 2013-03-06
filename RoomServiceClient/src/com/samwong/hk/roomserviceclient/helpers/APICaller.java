@@ -6,7 +6,7 @@ import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import org.apache.http.NameValuePair;
@@ -38,7 +38,7 @@ public abstract class APICaller<Params, Progress, Result> extends
 	 * @throws MalformedURLException 
 	 */
 	protected String getJsonResponseFromAPICall(HttpVerb verb,
-			ArrayList<NameValuePair> nameValuePairs) throws MalformedURLException, IOException {
+			List<NameValuePair> nameValuePairs) throws MalformedURLException, IOException {
 
 		// Wait for internet connection
 		ensureConnected();

@@ -15,7 +15,7 @@ import com.samwong.hk.roomserviceclient.constants.LogLevel;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
 
 public class Console {
-	private static List<Integer> logTextViewsIDs = Arrays.asList(R.id.logTextView, R.id.logTextViewInTrainingActivity);
+	private static List<Integer> logTextViewsIDs = Arrays.asList(R.id.logTextView, R.id.logTextViewInTrainingActivity, R.id.logTextViewInValidation);
 		
 	public static void println(Activity activity, LogLevel level, LogTag tag,
 			String msg) {

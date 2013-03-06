@@ -37,4 +37,9 @@
 	<string name="validationTogglerOff">Validating? No</string>
 	<string name="validationTogglerOn">Validating? Yes</string>
 	<string name="submitValidationForRoom_">Upload validation data</string>
+	<string name="collectingValidationForRoom_">Collecting validation data for </string>
+	<string name="submittingValidationDataForRoom_">Uploading validation data for </string>
+	<string name="submittedValidationDataForRoom_">Uploaded validation data for </string>
+	
+	
 </resources>

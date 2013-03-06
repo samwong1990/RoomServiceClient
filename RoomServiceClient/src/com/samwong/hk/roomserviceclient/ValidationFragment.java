@@ -1,14 +1,20 @@
 package com.samwong.hk.roomserviceclient;
 
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicIntegerArray;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import android.app.Activity;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,10 +22,16 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.ToggleButton;
 
 import com.samwong.hk.roomservice.api.commons.dataFormat.Report;
+import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
 import com.samwong.hk.roomservice.api.commons.dataFormat.ResponseWithReports;
+import com.samwong.hk.roomservice.api.commons.dataFormat.RoomStatistic;
+import com.samwong.hk.roomservice.api.commons.parameterEnums.ReturnCode;
+import com.samwong.hk.roomserviceclient.apicalls.PutStatistics;
 import com.samwong.hk.roomserviceclient.apicalls.RoomQuery;
 import com.samwong.hk.roomserviceclient.constants.LogLevel;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
@@ -27,100 +39,214 @@ import com.samwong.hk.roomserviceclient.helpers.Console;
 
 public class ValidationFragment extends Fragment {
 	private static final int POLLING_FREQUENCY_IN_MILLISEC = 1000;
-	
+
 	private List<String> latestRoomList = Collections.emptyList();
 	private List<String> currentRoomList = null;
-	private Timer validationScheduler = null;
-	private ConcurrentHashMap<String, AtomicIntegerArray> counter; // 0 -> totals, 1-> hits
-	
+	private Map<String, RoomStatistic> mapAlgoToCounter = new ConcurrentHashMap<String, RoomStatistic>();
+	private AtomicInteger dispatchedLocationQueries = new AtomicInteger(0);
+
+	/**
+	 * Uses AsyncTask and sleep to do the polling. executeOnExecutor is used
+	 * because the default executor is a serial executor. The serial executor
+	 * prevents the AsyncTask in locateMe from running.
+	 * 
+	 * @param view
+	 */
 	public synchronized void toggleValidationMode(final View view) {
 		// Is the toggle on?
-		boolean on = ((ToggleButton) view).isChecked();
-		AutoCompleteTextView autoCompleteTextView = (AutoCompleteTextView) getActivity().findViewById(R.id.roomPicker);
-		if (on) {
-			// Lock the room name
-			autoCompleteTextView.setEnabled(false);
-			final String expectedRoom = autoCompleteTextView.getText().toString();
+		if (((ToggleButton) view).isChecked()) {
+			//
+			final AutoCompleteTextView autoCompleteTextView = (AutoCompleteTextView) getActivity()
+					.findViewById(R.id.roomPicker);
+			final Button submitValidationButton = (Button) getActivity()
+					.findViewById(R.id.submitValidationButton);
 			// reset counters
-			counter = new ConcurrentHashMap<String, AtomicIntegerArray>();
-			
-			if (validationScheduler != null) {
-				validationScheduler.cancel();
-			}
-			validationScheduler = new Timer();
-			validationScheduler.scheduleAtFixedRate(new TimerTask() {
+			mapAlgoToCounter.clear();
+			dispatchedLocationQueries.set(0);
+
+			// Lock the room name, disable the button, update button text
+			submitValidationButton.setEnabled(false);
+			final String expectedRoom = autoCompleteTextView.getText()
+					.toString();
+			submitValidationButton
+					.setText(getText(R.string.collectingValidationForRoom_)
+							+ expectedRoom);
+
+			// begin polling
+			new AsyncTask<Void, Void, Void>() {
+
 				@Override
-				public void run() {
+				protected Void doInBackground(Void... params) {
+					while (((ToggleButton) view).isChecked()) {
+						publishProgress((Void) null);
+						SystemClock.sleep(POLLING_FREQUENCY_IN_MILLISEC);
+					}
+					return null;
+				}
+
+				@Override
+				protected void onProgressUpdate(Void... values) {
+					dispatchedLocationQueries.incrementAndGet();
 					validateLocation(expectedRoom);
 				}
-			}, 0, POLLING_FREQUENCY_IN_MILLISEC);
-		} else {
-			validationScheduler.cancel();
-			//TODO print results and create upload button
+
+				// Polling finished
+				protected void onPostExecute(Void result) {
+					// Wait for all jobs to return first
+					int sleepTime = 50;
+					while (sleepTime < 3000
+							&& dispatchedLocationQueries.get() > 0) {
+						SystemClock.sleep(sleepTime);
+						sleepTime *= 2;
+					}
+					// prepare the payload
+					final List<RoomStatistic> statistics = new ArrayList<RoomStatistic>(
+							mapAlgoToCounter.values());
+					// enable the submit button, update text
+					submitValidationButton.setEnabled(true);
+					submitValidationButton
+							.setText(getText(R.string.submitValidationForRoom_)
+									+ " for " + expectedRoom);
+					// update summary text
+					TextView summary = (TextView) getActivity().findViewById(
+							R.id.validationSummary);
+					StringBuilder sb = new StringBuilder();
+					sb.append(String.format("%s\n", new SimpleDateFormat(
+							"HH:mm:ss.SSS", Locale.US).format(new Date())));
+					for (RoomStatistic stat : statistics) {
+						sb.append(String.format(
+								"%s: Hit/Trials: %d/%d %%: %.2f\nDetails\n",
+								stat.getAlgorithmName(), stat.getHits(),
+								stat.getNumOfTrials(), 1.0 * stat.getHits()
+										/ stat.getNumOfTrials()));
+						for (Entry<String, AtomicInteger> entry : stat
+								.getRoomToHitMap().entrySet()) {
+							sb.append(entry.getKey() + ":"
+									+ entry.getValue().get() + "\n");
+						}
+						sb.append("\n");
+					}
+					summary.setText(sb.toString());
+
+					// click to submit statistics
+					submitValidationButton
+							.setOnClickListener(new OnClickListener() {
+								@SuppressWarnings("unchecked")
+								// for passing generic List to PutStatistics
+								@Override
+								public void onClick(View v) {
+									// disable the button, let user know it is
+									// uploading
+									submitValidationButton.setEnabled(false);
+									submitValidationButton
+											.setText(getText(R.string.submittingValidationDataForRoom_)
+													+ " " + expectedRoom);
+									// upload data
+									new PutStatistics(getActivity()) {
+										@Override
+										protected void onPostExecute(
+												Response result) {
+											// Upload finished
+											if (!result.getReturnCode().equals(
+													ReturnCode.OK)) {
+												// Something went wrong, enable
+												// button to let user retry
+												submitValidationButton
+														.setEnabled(true);
+												Console.println(
+														getActivity(),
+														LogLevel.ERROR,
+														LogTag.APICALL,
+														"Failed to submit statistics. "
+																+ result.getExplanation());
+												return;
+											}
+											// Succeeded, change text but remain
+											// disabled
+											submitValidationButton
+													.setText(getText(R.string.submittedValidationDataForRoom_)
+															+ " "
+															+ expectedRoom);
+										}
+									}.execute(statistics);
+								}
+							});
+
+				};
+			}.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Void) null);
 		}
 	}
-	
+
 	private void validateLocation(final String expectedRoom) {
-		// Requires wifi on AND connected to internet
 		new RoomQuery(getActivity()) {
 			@Override
 			protected void onPostExecute(final ResponseWithReports results) {
-				{
-					if (results == null) {
+				if (!results.getReturnCode().equals(ReturnCode.OK)) {
+					Console.println(getActivity(), LogLevel.ERROR,
+							LogTag.APICALL, "No response from server. "
+									+ results.getExplanation());
+					for (Exception e : this.getExceptions()) {
 						Console.println(getActivity(), LogLevel.ERROR,
-								LogTag.APICALL, "No response from server."
-										+ this.getLastException());
-						for (Exception e : this.getExceptions()) {
-							Console.println(getActivity(), LogLevel.ERROR,
-									LogTag.APICALL, e.toString());
-							return;
-						}
+								LogTag.APICALL, e.toString());
 					}
-					for (final Report report : results.getReports()) {
-						final String room = report.getRoom();
-						final String algoName = report.getAlgorithm();
-						if(!counter.containsKey(algoName)){
-							counter.put(algoName, new AtomicIntegerArray(2));
-						}
-						AtomicIntegerArray tracker = counter.get(room);
-						tracker.addAndGet(0, 1);	// increment total number of queries
-						if(expectedRoom.equals(room)){
-							tracker.addAndGet(1, 1);
-							Console.println(getActivity(), LogLevel.INFO,
-									LogTag.RESULT,
-									String.format("Match! increment counter. hit ratio: %d/%d", tracker.get(0), tracker.get(1))); 
-						}else{
-							Console.println(getActivity(), LogLevel.INFO,
-									LogTag.RESULT,
-									String.format("Missed. hit ratio: %d/%d", tracker.get(0), tracker.get(1)));
-						}
-						Console.println(getActivity(), LogLevel.INFO,
-								LogTag.APICALL,
-								"Algo: " + report.getAlgorithm()
-										+ " | Location Report: " + room
-										+ " | Notes: " + report.getNotes());
-					}
+					dispatchedLocationQueries.decrementAndGet();
+					return;
 				}
+				for (final Report report : results.getReports()) {
+					final String predictedRoom = report.getRoom();
+					final String algoName = report.getAlgorithm();
+					if (!mapAlgoToCounter.containsKey(algoName)) {
+						mapAlgoToCounter.put(algoName,
+								new RoomStatistic().withRoomName(expectedRoom)
+										.withAlgorithm(algoName));
+					}
+					RoomStatistic stat = mapAlgoToCounter.get(algoName);
+					stat.hit(predictedRoom);
+					if (expectedRoom.equals(predictedRoom)) {
+						Console.println(
+								getActivity(),
+								LogLevel.INFO,
+								LogTag.RESULT,
+								String.format(
+										"Match! increment counter. hit ratio: %d/%d",
+										stat.getHits(), stat.getNumOfTrials()));
+					} else {
+						Console.println(
+								getActivity(),
+								LogLevel.INFO,
+								LogTag.RESULT,
+								String.format(
+										"Missed! increment counter. hit ratio: %d/%d",
+										stat.getHits(), stat.getNumOfTrials()));
+					}
+					Console.println(getActivity(), LogLevel.INFO,
+							LogTag.APICALL, "Algo: " + report.getAlgorithm()
+									+ " | Location Report: " + predictedRoom
+									+ " | Notes: " + report.getNotes());
+
+				}
+				dispatchedLocationQueries.decrementAndGet();
 			}
 
-		}.execute(getActivity());
+		}.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, getActivity());
 	}
-	
+
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container,
 			Bundle savedInstanceState) {
 		return inflater.inflate(R.layout.validation_fragment, container, false);
 	}
-	
+
 	@Override
 	public void onViewCreated(View view, Bundle savedInstanceState) {
-		((ToggleButton)view.findViewById(R.id.validationToggler)).setOnClickListener(new OnClickListener() {
-			@Override
-			public void onClick(View v) {
-				toggleValidationMode(v);
-				return;
-			}
-		});
+		((ToggleButton) view.findViewById(R.id.validationToggler))
+				.setOnClickListener(new OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						toggleValidationMode(v);
+						return;
+					}
+				});
 		super.onViewCreated(view, savedInstanceState);
 	}
 
@@ -131,8 +257,8 @@ public class ValidationFragment extends Fragment {
 			AutoCompleteTextView autoCompleteTextView = ((AutoCompleteTextView) activity
 					.findViewById(R.id.roomPicker));
 			if (autoCompleteTextView != null) {
-				String[] resultArray = latestRoomList.toArray(new String[latestRoomList
-						.size()]);
+				String[] resultArray = latestRoomList
+						.toArray(new String[latestRoomList.size()]);
 				ArrayAdapter<String> adapter = new ArrayAdapter<String>(
 						activity, android.R.layout.simple_dropdown_item_1line,
 						resultArray);

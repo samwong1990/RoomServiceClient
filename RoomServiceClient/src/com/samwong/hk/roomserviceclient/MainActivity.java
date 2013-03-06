@@ -19,7 +19,7 @@ import android.widget.ToggleButton;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Report;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
 import com.samwong.hk.roomservice.api.commons.dataFormat.ResponseWithReports;
-import com.samwong.hk.roomserviceclient.apicalls.ConfirmValidClassification;
+import com.samwong.hk.roomserviceclient.apicalls.PutValidClassificationConfirmation;
 import com.samwong.hk.roomserviceclient.apicalls.RoomQuery;
 import com.samwong.hk.roomserviceclient.constants.LogLevel;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
@@ -109,7 +109,7 @@ public class MainActivity extends Activity {
 								// Just need one report, because the wifi
 								// signature will be the same for all.
 
-								new ConfirmValidClassification(thisActivity) {
+								new PutValidClassificationConfirmation(thisActivity) {
 									@Override
 									protected void onPostExecute(
 											Response response) {
