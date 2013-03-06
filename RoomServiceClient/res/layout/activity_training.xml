@@ -29,11 +29,10 @@
         android:weightSum="10" >
 
         <ToggleButton
-            android:id="@+id/ToggleButton1"
+            android:id="@+id/ToggleDataCollection"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="10"
-            android:onClick="toggleDataCollectionMode"
             android:textOff="@string/beginTraining"
             android:textOn="@string/stopTraining" />
 
@@ -50,6 +49,7 @@
             android:id="@+id/submitDataButton"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
+            android:enabled="false"
             android:text="@string/submitDataForRoom_" />
 
     </LinearLayout>

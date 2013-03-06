@@ -1,15 +1,10 @@
 package com.samwong.hk.roomserviceclient.apicalls;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 import net.sf.javaml.core.Instance;
 
 import org.apache.http.NameValuePair;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.message.BasicNameValuePair;
 
 import android.content.Context;
@@ -23,12 +18,12 @@ import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.Operation;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ParameterKey;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ReturnCode;
+import com.samwong.hk.roomserviceclient.constants.HttpVerb;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
-import com.samwong.hk.roomserviceclient.constants.URLs;
-import com.samwong.hk.roomserviceclient.helpers.AsyncTaskWithExceptionsAndContext;
+import com.samwong.hk.roomserviceclient.helpers.APICaller;
 import com.samwong.hk.roomserviceclient.helpers.AuthenticationDetailsPreperator;
 
-public abstract class UndoConfirmValidClassification  extends AsyncTaskWithExceptionsAndContext<Report, Void, Response>{
+public abstract class UndoConfirmValidClassification  extends APICaller<Report, Void, Response>{
 	
 	public UndoConfirmValidClassification(Context context) {
 		super(context);
@@ -52,31 +47,13 @@ public abstract class UndoConfirmValidClassification  extends AsyncTaskWithExcep
 				AuthenticationDetailsPreperator.getAuthenticationDetailsAsJson(authenticationDetails)));
 		
 		Log.d(LogTag.APICALL.toString(), nameValuePairs.toString());
-		
-		UrlEncodedFormEntity putData;
-		HttpURLConnection urlConnection = null;
-		try {
-			urlConnection = (HttpURLConnection) new URL(URLs.SERVLET_URL).openConnection();
-			putData = new UrlEncodedFormEntity(nameValuePairs, "UTF-8");
-			urlConnection.setDoOutput(true);
-			urlConnection.setRequestMethod("DELETE");
-			urlConnection.setFixedLengthStreamingMode((int) putData.getContentLength());
-			putData.writeTo(urlConnection.getOutputStream());
-			urlConnection.connect();
-			Scanner scanner = new Scanner(urlConnection.getInputStream(), "UTF-8").useDelimiter("\\A");
-			if (scanner.hasNext()){
-				String result = scanner.next();
-				Log.i(LogTag.APICALL.toString(), result);
-				return new Gson().fromJson(result, new TypeToken<Response>(){}.getType());
-			}
-			Log.w(LogTag.APICALL.toString(), "no response after posting new instance.");
-			return new Response().withReturnCode(ReturnCode.NO_RESPONSE).withExplanation("No response");
-		} catch(IOException e){
+		try{
+			String result = getJsonResponseFromAPICall(HttpVerb.DELETE, nameValuePairs);
+			return new Gson().fromJson(result, new TypeToken<Response>(){}.getType());
+		} catch(Exception e){
 			addException(e);
-			Log.e(LogTag.APICALL.toString(), "caught IOException when posting new instance" + e, e);
+			Log.e(LogTag.APICALL.toString(), "Caught exception when posting new instance" + e, e);
 			return new Response().withReturnCode(ReturnCode.UNRECOVERABLE_EXCEPTION).withExplanation("Caught Exception: " + e);
-		} finally {
-			if(urlConnection != null) urlConnection.disconnect();
 		}
 	}
 

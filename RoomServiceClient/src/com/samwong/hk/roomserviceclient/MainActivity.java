@@ -6,7 +6,6 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -147,10 +146,6 @@ public class MainActivity extends Activity {
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		switch (item.getItemId()) {
-		case R.id.menu_goToTrainingMode:
-			Intent intent = new Intent(this, TrainingActivity.class);
-		    startActivity(intent);
-			return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}

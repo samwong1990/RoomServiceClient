@@ -1,9 +1,6 @@
 package com.samwong.hk.roomserviceclient.apicalls;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 import net.sf.javaml.core.Instance;
 
@@ -18,13 +15,14 @@ import com.google.gson.reflect.TypeToken;
 import com.samwong.hk.roomservice.api.commons.dataFormat.AuthenticationDetails;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Report;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
+import com.samwong.hk.roomservice.api.commons.dataFormat.ResponseWithReports;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.Operation;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ParameterKey;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ReturnCode;
+import com.samwong.hk.roomserviceclient.constants.HttpVerb;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
-import com.samwong.hk.roomserviceclient.helpers.AsyncTaskWithExceptionsAndContext;
+import com.samwong.hk.roomserviceclient.helpers.APICaller;
 import com.samwong.hk.roomserviceclient.helpers.AuthenticationDetailsPreperator;
-import com.samwong.hk.roomserviceclient.helpers.URLBuilder;
 
 /**
  * Classifier returned the right room, so the data used in query can be saved as
@@ -34,27 +32,28 @@ import com.samwong.hk.roomserviceclient.helpers.URLBuilder;
  * 
  */
 public abstract class ConfirmValidClassification extends
-		AsyncTaskWithExceptionsAndContext<Report, Void, Response> {
+		APICaller<Report, Void, Response> {
 
 	public ConfirmValidClassification(Context context) {
 		super(context);
 	}
 
 	protected Response doInBackground(Report... param) {
-
+		// input validation
 		if (param.length != 1) {
 			throw new IllegalArgumentException("param.length != 1");
 		}
 
-		String instanceAsJson = new Gson().toJson(param[0].getInstance(),
-				new TypeToken<Instance>() {
-				}.getType());
+		// prepare parameters
 		ArrayList<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
 		nameValuePairs
 				.add(new BasicNameValuePair(ParameterKey.OPERATION.toString(),
 						Operation.CONFIRM_VALID_CLASSIFICATION.toString()));
 		nameValuePairs.add(new BasicNameValuePair(ParameterKey.ROOM.toString(),
 				param[0].getRoom()));
+		String instanceAsJson = new Gson().toJson(param[0].getInstance(),
+				new TypeToken<Instance>() {
+				}.getType());
 		nameValuePairs.add(new BasicNameValuePair(ParameterKey.INSTANCE
 				.toString(), instanceAsJson));
 		AuthenticationDetails authenticationDetails = new AuthenticationDetailsPreperator().getAuthenticationDetails(getContext());
@@ -63,35 +62,16 @@ public abstract class ConfirmValidClassification extends
 				AuthenticationDetailsPreperator.getAuthenticationDetailsAsJson(authenticationDetails)));
 		Log.d(LogTag.APICALL.toString(), nameValuePairs.toString());
 
-		HttpURLConnection urlConnection = null;
 		try {
-			urlConnection = (HttpURLConnection) URLBuilder.build(nameValuePairs)
-					.openConnection();
-			urlConnection.setRequestMethod("PUT");
-			urlConnection.connect();
-			Scanner scanner = new Scanner(urlConnection.getInputStream(),
-					"UTF-8").useDelimiter("\\A");
-			if (scanner.hasNext()) {
-				String result = scanner.next();
-				Log.i(LogTag.APICALL.toString(), result);
-				return new Gson().fromJson(result, new TypeToken<Response>() {
-				}.getType());
-			}
-			Log.w(LogTag.APICALL.toString(),
-					"no response after posting new instance.");
-			return new Response().withReturnCode(ReturnCode.NO_RESPONSE)
-					.withExplanation("No response");
-		} catch (IOException e) {
+			String result = getJsonResponseFromAPICall(HttpVerb.PUT, nameValuePairs);
+			return new Gson().fromJson(result, new TypeToken<Response>() {
+			}.getType());
+		} catch (Exception e) {
 			addException(e);
-			Log.e(LogTag.APICALL.toString(),
-					"caught IOException when posting new instance" + e, e);
-			return new Response().withReturnCode(
-					ReturnCode.UNRECOVERABLE_EXCEPTION).withExplanation(
-					"Caught Exception: " + e);
-		} finally {
-			if (urlConnection != null)
-				urlConnection.disconnect();
 		}
+		return new ResponseWithReports().withExplanation("Failed to complete API call").withReturnCode(ReturnCode.UNRECOVERABLE_EXCEPTION);
+		
+		
 	}
 
 	abstract protected void onPostExecute(Response result);

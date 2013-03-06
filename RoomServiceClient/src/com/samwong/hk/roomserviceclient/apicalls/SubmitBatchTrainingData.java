@@ -1,10 +1,7 @@
 package com.samwong.hk.roomserviceclient.apicalls;
 
-import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Scanner;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
@@ -21,14 +18,13 @@ import com.samwong.hk.roomservice.api.commons.dataFormat.WifiInformation;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.Operation;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ParameterKey;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ReturnCode;
+import com.samwong.hk.roomserviceclient.constants.HttpVerb;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
-import com.samwong.hk.roomserviceclient.helpers.AsyncTaskWithExceptionsAndContext;
+import com.samwong.hk.roomserviceclient.helpers.APICaller;
 import com.samwong.hk.roomserviceclient.helpers.AuthenticationDetailsPreperator;
-import com.samwong.hk.roomserviceclient.helpers.URLBuilder;
 
-public abstract class SubmitBatchTrainingData
-		extends
-		AsyncTaskWithExceptionsAndContext<List<WifiInformation>, Void, Response> {
+public abstract class SubmitBatchTrainingData extends
+		APICaller<List<WifiInformation>, Void, Response> {
 
 	private String room;
 
@@ -36,6 +32,8 @@ public abstract class SubmitBatchTrainingData
 		super(context);
 		this.room = room;
 	}
+
+	abstract protected void onPostExecute(Response result);
 
 	protected Response doInBackground(List<WifiInformation>... param) {
 		if (param.length != 1) {
@@ -45,10 +43,10 @@ public abstract class SubmitBatchTrainingData
 		TrainingData trainingData = new TrainingData().withRoom(room)
 				.withDatapoints(param[0]);
 		Log.d(LogTag.APICALL.toString(), trainingData.toString());
-		
+
 		AuthenticationDetails authenticationDetails = new AuthenticationDetailsPreperator()
-		.getAuthenticationDetails(getContext());
-		
+				.getAuthenticationDetails(getContext());
+
 		ArrayList<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>();
 		nameValuePairs.add(new BasicNameValuePair(ParameterKey.OPERATION
 				.toString(), Operation.UPLOAD_TRAINING_DATA.toString()));
@@ -61,38 +59,16 @@ public abstract class SubmitBatchTrainingData
 						.toString(), AuthenticationDetailsPreperator
 						.getAuthenticationDetailsAsJson(authenticationDetails)));
 		Log.d(LogTag.APICALL.toString(), nameValuePairs.toString());
-		
-		HttpURLConnection urlConnection = null;
+
 		try {
-			urlConnection = (HttpURLConnection) URLBuilder.build(nameValuePairs)
-					.openConnection();
-			urlConnection.setRequestMethod("PUT");
-			urlConnection.connect();
-			Scanner scanner = new Scanner(urlConnection.getInputStream(),
-					"UTF-8").useDelimiter("\\A");
-			if (scanner.hasNext()) {
-				String result = scanner.next();
-				Log.i(LogTag.APICALL.toString(), result);
-				return new Gson().fromJson(result, new TypeToken<Response>() {
-				}.getType());
-			}
-			Log.w(LogTag.APICALL.toString(),
-					"no response after posting new instance.");
-			return new Response().withReturnCode(ReturnCode.NO_RESPONSE)
-					.withExplanation("No response");
-		} catch (IOException e) {
-			addException(e);
-			Log.e(LogTag.APICALL.toString(),
-					"caught IOException when posting new instance" + e, e);
+			String result = getJsonResponseFromAPICall(HttpVerb.POST,
+					nameValuePairs);
+			return new Gson().fromJson(result, new TypeToken<Response>() {
+			}.getType());
+		} catch (Exception e) {
 			return new Response().withReturnCode(
 					ReturnCode.UNRECOVERABLE_EXCEPTION).withExplanation(
 					"Caught Exception: " + e);
-		} finally {
-			if (urlConnection != null)
-				urlConnection.disconnect();
 		}
 	}
-
-	abstract protected void onPostExecute(Response result);
-
 }

@@ -8,11 +8,11 @@ import java.util.List;
 
 import org.apache.http.NameValuePair;
 
-import com.samwong.hk.roomserviceclient.constants.URLs;
+import com.samwong.hk.roomserviceclient.constants.Defaults;
 
 public class URLBuilder {
 	public static URL build(List<NameValuePair> nvps) throws UnsupportedEncodingException, MalformedURLException{
-		StringBuilder url = new StringBuilder(URLs.SERVLET_URL);
+		StringBuilder url = new StringBuilder(Defaults.SERVLET_URL);
 		url.append("?");
 		for (int i = 0; i < nvps.size(); i++) {
 			NameValuePair nvp = nvps.get(i);

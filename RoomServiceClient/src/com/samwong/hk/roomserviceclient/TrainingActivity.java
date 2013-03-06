@@ -106,10 +106,6 @@ public class TrainingActivity extends Activity {
 		case R.id.menu_reloadRoomList:
 			updateRoomList();
 			return true;
-		case R.id.menu_Training_GoToMainActivity:
-			Intent intent = new Intent(this, MainActivity.class);
-		    startActivity(intent);
-			return true;
 		default:
 			return super.onOptionsItemSelected(item);
 		}
