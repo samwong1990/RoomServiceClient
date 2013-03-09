@@ -41,6 +41,7 @@ public class Console {
 				if(textView != null){
 					StringBuffer buffer = new StringBuffer(textView.getText());
 					buffer.insert(0, formattedMessage);
+					buffer.setLength(1024);
 					textView.setText(buffer);
 				}
 			}

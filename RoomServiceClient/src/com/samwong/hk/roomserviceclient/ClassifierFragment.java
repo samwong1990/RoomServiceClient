@@ -6,8 +6,8 @@ import java.util.List;
 import android.app.Activity;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -20,16 +20,19 @@ import android.widget.ToggleButton;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Report;
 import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
 import com.samwong.hk.roomservice.api.commons.dataFormat.ResponseWithReports;
+import com.samwong.hk.roomservice.api.commons.dataFormat.WifiInformation;
 import com.samwong.hk.roomservice.api.commons.parameterEnums.ReturnCode;
 import com.samwong.hk.roomserviceclient.apicalls.PutValidClassificationConfirmation;
 import com.samwong.hk.roomserviceclient.apicalls.RoomQuery;
 import com.samwong.hk.roomserviceclient.constants.LogLevel;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
 import com.samwong.hk.roomserviceclient.helpers.Console;
+import com.samwong.hk.roomserviceclient.helpers.WifiScannerPoller;
+import com.samwong.hk.roomserviceclient.helpers.WifiScanner;
 
 public class ClassifierFragment extends Fragment {
-	private static final int TRACKING_MODE_POLLING_FREQUENCY_IN_MILLISEC = 2000;
 	private Activity activity;
+	private WifiScannerPoller wifiScanPoller;
 
 	/**
 	 * Uses AsyncTask and sleep to do the polling.
@@ -42,22 +45,19 @@ public class ClassifierFragment extends Fragment {
 		boolean on = ((ToggleButton) view).isChecked();
 		// If it is on, spawn a thread to keep fetching location. 
 		if (on) {
-			new AsyncTask<Void, Void, Void>(){
-
+			wifiScanPoller = new WifiScannerPoller(){
 				@Override
-				protected Void doInBackground(Void... params) {
-					while(((ToggleButton) view).isChecked()){
-						publishProgress((Void) null);
-						SystemClock.sleep(TRACKING_MODE_POLLING_FREQUENCY_IN_MILLISEC);
+				protected void onProgressUpdate(WifiInformation... values) {
+					if(values.length != 1){
+						Log.e(LogTag.APICALL.toString(), "WifiScanPolling did not return exactly 1 WifiInformation.");
+						return;
 					}
-					return null;
+					locateMe(view, values[0]);
 				}
-				
-				protected void onProgressUpdate(Void... values) {
-					locateMe(view);
-				};
-				
-			}.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR,(Void)null);
+			};
+			wifiScanPoller.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, getActivity());
+		}else{
+			wifiScanPoller.cancel(false);
 		}
 	}
 
@@ -67,13 +67,13 @@ public class ClassifierFragment extends Fragment {
 	 * This showcases how one can continuously improve the prediction quality over use.
 	 * @param view
 	 */
-	public void locateMe(View view) {
+	public void locateMe(View view, WifiInformation wifiscan) {
 		final Button locateMeButton = (Button) getActivity().findViewById(R.id.locateMeButton);
 		locateMeButton.setEnabled(false);
 		locateMeButton.setText(getText(R.string.locateMeBtnWaiting));
 		
 		// Requires wifi on AND connected to internet
-		new RoomQuery(getActivity()) {
+		new RoomQuery(getActivity(), wifiscan) {
 			@Override
 			protected void onPostExecute(final ResponseWithReports results) {
 				{
@@ -168,7 +168,7 @@ public class ClassifierFragment extends Fragment {
 		((Button) getActivity().findViewById(R.id.locateMeButton)).setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
-				locateMe(v);
+				locateMe(v, WifiScanner.getWifiInformation(getActivity()));
 			}
 		});
 		this.activity = getActivity();

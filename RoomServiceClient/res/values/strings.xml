@@ -9,7 +9,7 @@
     <string name="title_section3">Validation</string>
     <string name="title_section2">Training</string>
     <string name="title_section1">Classifier</string>
-    <string name="title_activity_validation">ValidationActivity</string
+    <string name="title_activity_validation">Room Service</string
         >
     <!-- Classifier Strings -->
     <string name="app_name">RoomServiceClient</string>
@@ -39,7 +39,7 @@
 	<string name="submitValidationForRoom_">Upload validation data</string>
 	<string name="collectingValidationForRoom_">Collecting validation data for </string>
 	<string name="submittingValidationDataForRoom_">Uploading validation data for </string>
-	<string name="submittedValidationDataForRoom_">Uploaded validation data for </string>
+	<string name="submittedValidationDataForRoom_">Succeeded. Validation data uploaded for </string>
 	
 	
 </resources>

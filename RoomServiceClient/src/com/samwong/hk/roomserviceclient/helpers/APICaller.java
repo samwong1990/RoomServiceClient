@@ -39,49 +39,52 @@ public abstract class APICaller<Params, Progress, Result> extends
 	 */
 	protected String getJsonResponseFromAPICall(HttpVerb verb,
 			List<NameValuePair> nameValuePairs) throws MalformedURLException, IOException {
+		Log.i(LogTag.APICALL.toString(), verb.toString() + " parameters: " + nameValuePairs);
+		for(int retry=0; retry<Defaults.MAX_RETRIES; retry++){
+			// Wait for internet connection
+			ensureConnected();
 
-		// Wait for internet connection
-		ensureConnected();
-		
-		// Make the call
-		UrlEncodedFormEntity postData;
-		HttpURLConnection urlConnection = null;
-		try{
-			// specify connection details
-			postData = new UrlEncodedFormEntity(nameValuePairs, "UTF-8");
-			if(verb.equals(HttpVerb.POST)){
-				urlConnection = (HttpURLConnection)  new URL(Defaults.SERVLET_URL).openConnection();
-				urlConnection.setRequestMethod(verb.toString());
-				urlConnection.setDoOutput(true);
-				urlConnection.setFixedLengthStreamingMode((int) postData
-						.getContentLength());
-				postData.writeTo(urlConnection.getOutputStream());
-			}else{
-				urlConnection = (HttpURLConnection)  URLBuilder.build(nameValuePairs).openConnection();
-				urlConnection.setRequestMethod(verb.toString());
+			// Make the call
+			UrlEncodedFormEntity postData;
+			HttpURLConnection urlConnection = null;
+			try{
+				// specify connection details
+				postData = new UrlEncodedFormEntity(nameValuePairs, "UTF-8");
+				if(verb.equals(HttpVerb.POST)){
+					urlConnection = (HttpURLConnection)  new URL(Defaults.SERVLET_URL).openConnection();
+					urlConnection.setRequestMethod(verb.toString());
+					urlConnection.setDoOutput(true);
+					urlConnection.setFixedLengthStreamingMode((int) postData
+							.getContentLength());
+					postData.writeTo(urlConnection.getOutputStream());
+				}else{
+					urlConnection = (HttpURLConnection)  URLBuilder.build(nameValuePairs).openConnection();
+					urlConnection.setRequestMethod(verb.toString());
+				}
+				urlConnection.setConnectTimeout(1000);
+
+				// Got connection, begin
+				urlConnection.connect();
+				Scanner scanner = new Scanner(urlConnection.getInputStream(),
+						"UTF-8").useDelimiter("\\A");
+				if (scanner.hasNext()) {
+					String result = scanner.next();
+					Log.i(LogTag.APICALL.toString(), "RESPONSE:" + result);
+					return result;
+				}
+				Log.w(LogTag.APICALL.toString(), "No response from the server.");
+			} catch (UnsupportedEncodingException e) {
+				addException(e);
+				Log.e(LogTag.APICALL.toString(), "Caught UnsupportedEncodingException:" + e);
+			} catch (IOException e){
+				addException(e);
+				Log.e(LogTag.APICALL.toString(), "Caught IOException:" + e);
+			} finally {
+				if (urlConnection != null)
+					urlConnection.disconnect();
 			}
-			urlConnection.setConnectTimeout(1000);
-			Log.i("ASDF",verb.toString());
-			
-			
-			// Got connection, begin
-			urlConnection.connect();
-			Scanner scanner = new Scanner(urlConnection.getInputStream(),
-					"UTF-8").useDelimiter("\\A");
-			if (scanner.hasNext()) {
-				String result = scanner.next();
-				Log.i(LogTag.APICALL.toString(), "RESPONSE:" + result);
-				return result;
-			}
-			Log.w(LogTag.APICALL.toString(), "No response from the server.");
-		} catch (UnsupportedEncodingException e) {
-			addException(e);
-			Log.e(LogTag.APICALL.toString(), "Caught UnsupportedEncodingException:" + e);
-		} finally {
-			if (urlConnection != null)
-				urlConnection.disconnect();
 		}
-		throw new IOException("Failed to complete the API call.");
+		throw new IOException("Failed to complete the API call after " + Defaults.MAX_RETRIES + " retries.");
 	}
 	
 	/**

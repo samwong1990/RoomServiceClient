@@ -1,160 +1,186 @@
 package com.samwong.hk.roomserviceclient;
 
-import java.util.LinkedList;
+import java.util.Collections;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.NoSuchElementException;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.app.NavUtils;
+import android.support.v4.view.ViewPager;
+import android.support.v4.view.ViewPager.OnPageChangeListener;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.view.View.OnClickListener;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.widget.ToggleButton;
 
-import com.samwong.hk.roomservice.api.commons.dataFormat.Report;
-import com.samwong.hk.roomservice.api.commons.dataFormat.Response;
-import com.samwong.hk.roomservice.api.commons.dataFormat.ResponseWithReports;
-import com.samwong.hk.roomserviceclient.apicalls.PutValidClassificationConfirmation;
-import com.samwong.hk.roomserviceclient.apicalls.RoomQuery;
+import com.samwong.hk.roomserviceclient.apicalls.GetListOfRooms;
 import com.samwong.hk.roomserviceclient.constants.LogLevel;
 import com.samwong.hk.roomserviceclient.constants.LogTag;
 import com.samwong.hk.roomserviceclient.helpers.Console;
 
-public class MainActivity extends Activity {
-	private static final int TRACKING_MODE_POLLING_FREQUENCY_IN_MILLISEC = 1000;
-	final Activity thisActivity = this; // a reference for callbacks
-	private Timer trackingModeScheduler = null;
+public class MainActivity extends FragmentActivity {
 
-	public synchronized void toggleTrackingMode(final View view) {
-		// Is the toggle on?
-		boolean on = ((ToggleButton) view).isChecked();
+	/**
+	 * The {@link android.support.v4.view.PagerAdapter} that will provide
+	 * fragments for each of the sections. We use a
+	 * {@link android.support.v4.app.FragmentPagerAdapter} derivative, which
+	 * will keep every loaded fragment in memory. If this becomes too memory
+	 * intensive, it may be best to switch to a
+	 * {@link android.support.v4.app.FragmentStatePagerAdapter}.
+	 */
+	SectionsPagerAdapter mSectionsPagerAdapter;
 
-		if (on) {
-			if (trackingModeScheduler != null) {
-				trackingModeScheduler.cancel();
-			}
-			trackingModeScheduler = new Timer();
-			trackingModeScheduler.scheduleAtFixedRate(new TimerTask() {
-				@Override
-				public void run() {
-					locateMe(view);
-				}
-			}, 0, TRACKING_MODE_POLLING_FREQUENCY_IN_MILLISEC);
-		} else {
-			trackingModeScheduler.cancel();
-		}
-	}
+	/**
+	 * The {@link ViewPager} that will host the section contents.
+	 */
+	ViewPager mViewPager;
 
-	public void locateMe(View view) {
-		final Button locateMeButton = (Button) findViewById(R.id.locateMeButton);
-		runOnUiThread(new Runnable() {
+
+
+	private final Activity thisActivity = this; // for passing into helpers. 
+	private List<String> latestRoomList = Collections.emptyList();
+	
+	private void updateRoomList() {
+		new GetListOfRooms(this) {
 			@Override
-			public void run() {
-				locateMeButton.setEnabled(false);
-				locateMeButton.setText(getText(R.string.locateMeBtnWaiting));
-			}
-		});
-
-		// Requires wifi on AND connected to internet
-		new RoomQuery(thisActivity) {
-			@Override
-			protected void onPostExecute(final ResponseWithReports results) {
-				{
-					((LinearLayout) findViewById(R.id.resultsArea))
-							.removeAllViews();
-
-					locateMeButton.setText(getText(R.string.locateMeBtnString));
-					locateMeButton.setEnabled(true);
-					if (results == null) {
-						Console.println(thisActivity, LogLevel.ERROR,
-								LogTag.APICALL, "No response from server."
-										+ this.getLastException());
-						for (Exception e : this.getExceptions()) {
-							Console.println(thisActivity, LogLevel.ERROR,
-									LogTag.APICALL, e.toString());
-							return;
-						}
-					}
-					LinearLayout linearLayout = (LinearLayout) findViewById(R.id.resultsArea);
-					final List<Button> buttonsAdded = new LinkedList<Button>();
-					for (final Report report : results.getReports()) {
-						final String room = report.getRoom();
-						Console.println(thisActivity, LogLevel.INFO,
-								LogTag.APICALL,
-								"Algo: " + report.getAlgorithm()
-										+ " | Location Report: " + room
-										+ " | Notes: " + report.getNotes());
-						final Button button = new Button(getBaseContext());
-						if (room == null) {
-							button.setText(getString(R.string.noResult,
-									report.getAlgorithm()));
-							button.setEnabled(false);
-						} else {
-							button.setText(report.getAlgorithm() + " " + room);
-						}
-
-						button.setOnClickListener(new OnClickListener() {
-							public void onClick(View v) {
-								button.setEnabled(false);
-								button.setText(getString(
-										R.string.addRoomButtonWaiting, room));
-								for (Button buttonAdded : buttonsAdded) {
-									buttonAdded.setEnabled(false);
-								}
-								// Just need one report, because the wifi
-								// signature will be the same for all.
-
-								new PutValidClassificationConfirmation(thisActivity) {
-									@Override
-									protected void onPostExecute(
-											Response response) {
-										Console.println(thisActivity,
-												LogLevel.INFO, LogTag.APICALL,
-												response.toString());
-									}
-								}.execute(results.getReports().get(0));
-								button.setText(getString(
-										R.string.reinforceBtnSuccess, room));
-								button.setEnabled(false);
-							}
-						});
-						buttonsAdded.add(button);
-						TextView textView = new TextView(getBaseContext());
-						textView.setText(report.getNotes());
-						LinearLayout row = new LinearLayout(getBaseContext());
-						row.addView(button);
-						row.addView(textView);
-						linearLayout.addView(row);
-					}
+			protected void onPostExecute(final List<String> result) {
+				Console.println(thisActivity, LogLevel.INFO, LogTag.APICALL,
+						"Received roomList:" + result);
+				if (result == null) {
+					Console.println(
+							thisActivity,
+							LogLevel.ERROR,
+							LogTag.APICALL,
+							"No response for the roomList query."
+									+ this.getLastException());
+					return;
+				}else{
+					latestRoomList = result;
 				}
 			}
-
-		}.execute(this);
+		}.execute();
 	}
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_main);
+		setContentView(R.layout.activity_validation);
+
+		// Show the Up button in the action bar.
+		getActionBar().setDisplayHomeAsUpEnabled(true);
+
+		// Create the adapter that will return a fragment for each of the three
+		// primary sections of the app.
+		mSectionsPagerAdapter = new SectionsPagerAdapter(
+				getSupportFragmentManager());
+
+		// Set up the ViewPager with the sections adapter.
+		mViewPager = (ViewPager) findViewById(R.id.pager);
+		mViewPager.setAdapter(mSectionsPagerAdapter);
+		
+		// Set it to update autocomplete list on every scroll
+		mViewPager.setOnPageChangeListener(new OnPageChangeListener() {
+			@Override
+			public void onPageSelected(int pageNo) {
+				switch(pageNo){
+				case 1:
+					((TrainingFragment)mSectionsPagerAdapter.getItem(1)).updateAutoComplete(latestRoomList, thisActivity);
+				case 2:
+					((ValidationFragment)mSectionsPagerAdapter.getItem(2)).updateAutoComplete(latestRoomList, thisActivity);
+				}
+			}
+
+			@Override
+			public void onPageScrollStateChanged(int arg0) {}
+
+			@Override
+			public void onPageScrolled(int arg0, float arg1,
+					int arg2) {}
+			
+		});
 	}
-	
+
 	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		switch (item.getItemId()) {
-		default:
-			return super.onOptionsItemSelected(item);
-		}
+	protected void onStart() {
+		super.onStart();
+		// Fetch room lists for autocomplete
+		updateRoomList();
 	}
-	
+
 	@Override
 	public boolean onCreateOptionsMenu(Menu menu) {
 		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.activity_main, menu);
+		getMenuInflater().inflate(R.menu.activity_validation, menu);
 		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case android.R.id.home:
+			// This ID represents the Home or Up button. In the case of this
+			// activity, the Up button is shown. Use NavUtils to allow users
+			// to navigate up one level in the application structure. For
+			// more details, see the Navigation pattern on Android Design:
+			//
+			// http://developer.android.com/design/patterns/navigation.html#up-vs-back
+			//
+			NavUtils.navigateUpFromSameTask(this);
+			return true;
+		case R.id.menu_reloadRoomList:
+			updateRoomList();
+			return true;
+		}
+		return super.onOptionsItemSelected(item);
+	}
+
+	/**
+	 * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
+	 * one of the sections/tabs/pages.
+	 */
+	public class SectionsPagerAdapter extends FragmentPagerAdapter {
+
+		public SectionsPagerAdapter(FragmentManager fm) {
+			super(fm);
+		}
+
+		@Override
+		public Fragment getItem(int position) {
+			// getItem is called to instantiate the fragment for the given page.
+			// Return a DummySectionFragment (defined as a static inner class
+			// below) with the page number as its lone argument.
+			switch (position) {
+			case 0:
+				return new ClassifierFragment();
+			case 1: 
+				return new TrainingFragment();
+			case 2:
+				return new ValidationFragment();
+			default:
+				throw new NoSuchElementException();
+			}
+		}
+
+		@Override
+		public int getCount() {
+			// Show 3 total pages.
+			return 3;
+		}
+
+		@Override
+		public CharSequence getPageTitle(int position) {
+			switch (position) {
+			case 0:
+				return getString(R.string.title_section1);
+			case 1:
+				return getString(R.string.title_section2);
+			case 2:
+				return getString(R.string.title_section3);
+			}
+			return null;
+		}
 	}
 }

@@ -8,16 +8,22 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginBottom="15dp"
-        android:layout_weight="10"
-        android:weightSum="10" >
+        android:layout_weight="10" >
 
         <AutoCompleteTextView
             android:id="@+id/roomPicker"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="fill_parent"
-            android:layout_weight="7"
             android:ems="10"
             android:hint="@string/roomPickerHint" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="20"
+        android:orientation="horizontal"
+        android:weightSum="10" >
 
         <ToggleButton
             android:id="@+id/validationToggler"
@@ -26,19 +32,12 @@
             android:layout_weight="3"
             android:textOff="@string/validationTogglerOff"
             android:textOn="@string/validationTogglerOn" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="10"
-        android:orientation="vertical"
-        android:weightSum="10" >
 
         <Button
             android:id="@+id/submitValidationButton"
-            android:layout_width="fill_parent"
+            android:layout_width="0dp"
             android:layout_height="fill_parent"
+            android:layout_weight="7"
             android:enabled="false"
             android:text="@string/submitValidationForRoom_" />
 
