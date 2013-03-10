@@ -73,14 +73,16 @@ public class TrainingFragment extends Fragment {
 						@Override
 						public void onClick(View v) {
 							submitButton.setEnabled(false);
+							submitButton.setText(getString(R.string.submittingDataForRoom_) + " " + currentAccumulator.getRoomName());
 							new SubmitBatchTrainingData(currentAccumulator.getRoomName(), getActivity()) {
 								@Override
 								protected void onPostExecute(Response result) {
-									if (!result.getReturnCode().equals(ReturnCode.OK)) {
-										Console.println(getActivity(), LogLevel.ERROR, LogTag.APICALL, result.getExplanation());
+									if (result.getReturnCode().equals(ReturnCode.OK)) {
+										submitButton.setText(getString(R.string.submittedDataForRoom_) + " " + currentAccumulator.getRoomName());
+										Console.println(getActivity(), LogLevel.ERROR, LogTag.APICALL, "OK");
 									} else {
 										submitButton.setEnabled(true);
-										Console.println(getActivity(), LogLevel.ERROR, LogTag.APICALL, "OK");
+										Console.println(getActivity(), LogLevel.ERROR, LogTag.APICALL, result.getExplanation());
 									}
 								}
 							}.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, result);

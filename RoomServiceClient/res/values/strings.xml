@@ -9,8 +9,7 @@
     <string name="title_section3">Validation</string>
     <string name="title_section2">Training</string>
     <string name="title_section1">Classifier</string>
-    <string name="title_activity_validation">Room Service</string
-        >
+    <string name="title_activity_validation">Room Service</string>
     <!-- Classifier Strings -->
     <string name="app_name">RoomServiceClient</string>
     <string name="locateMeBtnString">Where Am I!?</string>
@@ -20,8 +19,7 @@
     <string name="reinforceBtnFailure">Sorry, please try again.</string>
     <string name="trackingTogglerStringOn">Tracking: On</string>
     <string name="trackingTogglerStringOff">Tracking: Off</string>
-    <string name="addRoomButtonWaiting">Uploading...</string>
-    
+    <string name="addRoomButtonWaiting">Uploading&#x2026;</string>
 
     <!-- Training Strings -->
     <string name="title_activity_training">TrainingActivity</string>
@@ -29,17 +27,18 @@
     <string name="submitDataForRoomWaiting">Waiting for data collection to complete</string>
     <string name="newRoomNameHint">Room to train</string>
     <string name="submitDataForRoom_">Submit Data for Room:</string>
+    <string name="submittingDataForRoom_">Submitting Data for Room:</string>
+    <string name="submittedDataForRoom_">Submitted Data for Room:</string>
     <string name="beginTraining">Start Collecting Data</string>
     <string name="stopTraining">Collecting Data, click again when done</string>
 
     <!-- Validation strings -->
-	<string name="roomPickerHint">Pick a room to validate</string>
-	<string name="validationTogglerOff">Validating? No</string>
-	<string name="validationTogglerOn">Validating? Yes</string>
-	<string name="submitValidationForRoom_">Upload validation data</string>
-	<string name="collectingValidationForRoom_">Collecting validation data for </string>
-	<string name="submittingValidationDataForRoom_">Uploading validation data for </string>
-	<string name="submittedValidationDataForRoom_">Succeeded. Validation data uploaded for </string>
-	
-	
+    <string name="roomPickerHint">Pick a room to validate</string>
+    <string name="validationTogglerOff">Validating? No</string>
+    <string name="validationTogglerOn">Validating? Yes</string>
+    <string name="submitValidationForRoom_">Upload validation data for </string>
+    <string name="collectingValidationForRoom_">Collecting validation data for </string>
+    <string name="submittingValidationDataForRoom_">Uploading validation data for </string>
+    <string name="submittedValidationDataForRoom_">Succeeded. Validation data uploaded for </string>
+
 </resources>
